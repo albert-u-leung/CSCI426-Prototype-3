@@ -1,12 +1,15 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using MoreMountains.Feedbacks;
+using TMPro;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
 public class PlayerController : MonoBehaviour
 {
-    [Header("Player")] [SerializeField] private bool isP1;
+    [Header("Player")] 
+    [SerializeField] private bool isP1;
 	
 	[Header("Movement")]
     [SerializeField, Range(0f, 100f)]
@@ -42,19 +45,30 @@ public class PlayerController : MonoBehaviour
 	[Header("Asset")]
 	private AudioSource audioSource;
 	public AudioClip dashSFX;
+	private Animator animator;
+	[SerializeField] private MMFeedbacks hitFeedack;
+	[SerializeField] private TextMeshProUGUI hitCountText;
+	private GameManager gameManager;
+	
+	[Header("GameSession")]
+	public int hitCount;
 
 	void Awake () {
 		playerInput = GetComponent<PlayerInput>();
-		Debug.Log(playerInput);
 		rb = GetComponent<Rigidbody>();
 		audioSource = GetComponent<AudioSource>();
-		
+		animator = GetComponent<Animator>();
+		gameManager = FindObjectOfType<GameManager>();
+
 	}
 	void Update ()
     {
 	    HandleDash();
 	    HandleRotation();
 	    isGamepad = playerInput.currentControlScheme.Equals("Gamepad") ? true : false;
+	    
+	    SetTeamID();
+	    ChangeHitText();
     }
 	void FixedUpdate () 
     {
@@ -68,10 +82,16 @@ public class PlayerController : MonoBehaviour
     {
 	    playerMoveInput = ctx.ReadValue<Vector2>();
 	    playerMoveInput = Vector2.ClampMagnitude(playerMoveInput, 1f);
-		Debug.Log(playerMoveInput);
-		desiredVelocity = new Vector3(playerMoveInput.x, 0f, playerMoveInput.y) * maxSpeed;
-		Debug.Log("move" + ctx);
-	}
+	    desiredVelocity = new Vector3(playerMoveInput.x, 0f, playerMoveInput.y) * maxSpeed;
+    }
+    public void OnAttack(InputAction.CallbackContext ctx)
+    {
+	    if (ctx.performed)
+	    {
+		    //animator.SetTrigger("ATTACK");
+	    }
+    }
+
     public void OnDash(InputAction.CallbackContext ctx)
     {
 	    if (dashCount > 0f && dashCoolCounter <= 0f && dashCounter <= 0f)
@@ -92,7 +112,6 @@ public class PlayerController : MonoBehaviour
     public void OnAim(InputAction.CallbackContext ctx)
     {
 	    aim = ctx.ReadValue<Vector2>();
-	    Debug.Log("Aim" + ctx);
     }
 	void ClearState () {
 	    contactNormal = Vector3.zero;
@@ -218,4 +237,39 @@ public class PlayerController : MonoBehaviour
 	    transform.LookAt(heightCorrectedPoint);
     }
 
+    private void OnCollisionEnter(Collision other)
+    {
+	    if (other.gameObject.tag == "Ball")
+	    {
+		    hitCount--;
+		    audioSource.Play();
+		    hitFeedack.PlayFeedbacks();
+	    }
+    }
+
+    private void ChangeHitText()
+    {
+	    if (!gameManager.gameOver)
+	    {
+		    hitCountText.text = hitCount.ToString();
+	    }
+
+    }
+
+    private void SetTeamID()
+    {
+	    if (gameObject.name == "Player1")
+	    {
+		    isP1 = true;
+		    teamID = 1;
+	    }
+	    else if(gameObject.name == "Player2")
+
+	    {
+		    isP1 = false;
+		    teamID = 2;
+	    }
+
+    }
+    
 }
